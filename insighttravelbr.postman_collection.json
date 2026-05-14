@@ -1,0 +1,1568 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Insight Travel BR — API",
+    "description": "Insight Travel BR — Admin & Mobile API.\n\nImport this collection and create a Postman Environment with the variables below.\n\n**Quick Start:**\n1. Run **Admin Auth → Login Admin** — the test script auto-sets `adminToken`.\n2. All protected routes read `{{adminToken}}` from the environment automatically.\n3. After creating a Trip/Traveler/Supplier the test scripts auto-populate `tripId`, `travelerId`, `supplierId`.\n\n**Base URL:** `http://localhost:5000/api/v1`\n\n**Required env variables:** `baseUrl`, `adminToken`, `resetToken`, `tripId`, `travelerId`, `supplierId`, `slotId`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "http://localhost:5000/api/v1", "type": "string", "description": "API base URL — change port if needed" },
+    { "key": "adminToken", "value": "", "type": "string", "description": "Auto-set by Login Admin test script" },
+    { "key": "resetToken", "value": "", "type": "string", "description": "Auto-set by Verify OTP test script" },
+    { "key": "tripId",     "value": "", "type": "string", "description": "Auto-set by Create Trip test script" },
+    { "key": "travelerId", "value": "", "type": "string", "description": "Auto-set by Create Traveler test script" },
+    { "key": "supplierId", "value": "", "type": "string", "description": "Auto-set by Create Supplier test script" },
+    { "key": "slotId",     "value": "", "type": "string", "description": "Copy a timeSlot _id here after adding one" }
+  ],
+  "item": [
+
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns server status, uptime in seconds, and current timestamp. No auth required."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"uptime\": 3245.87,\n  \"timestamp\": \"2026-05-14T10:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Admin Auth",
+      "item": [
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@insighttravel.com\",\n  \"password\": \"Admin@1234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates an admin user with email and password.\n\n**Required fields:** `email`, `password`\n\nOn success the test script automatically saves `accessToken` to `{{adminToken}}`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('adminToken', json.accessToken);",
+                  "    console.log('adminToken set:', json.accessToken.substring(0, 30) + '...');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 Login Successful",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"user\": {\n    \"_id\": \"664abc123def456789000001\",\n    \"email\": \"admin@insighttravel.com\",\n    \"role\": \"admin\",\n    \"isActive\": true,\n    \"createdAt\": \"2026-01-01T00:00:00.000Z\"\n  },\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            {
+              "name": "400 Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing required fields: email, password\"\n}"
+            },
+            {
+              "name": "401 Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid credentials\"\n}"
+            },
+            {
+              "name": "429 Rate Limited",
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Too many attempts. Try again in 15 minutes.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@insighttravel.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Sends a 6-digit OTP to the admin's email. Always returns 200 regardless of whether the email exists (prevents user enumeration).\n\n**Required fields:** `email`"
+          },
+          "response": [
+            {
+              "name": "200 OTP Sent",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"If that email address is registered, an OTP has been sent.\"\n}"
+            },
+            {
+              "name": "400 Missing Email",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Please provide your email address\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Verify Reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "description": "Verifies the OTP received by email. On success returns a short-lived `resetToken` (valid 15 min) to be used in the reset-password request.\n\n**Required fields:** `otp`\n\nOTP is hashed (sha256) before DB lookup — cannot be reused after successful verification."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('resetToken', pm.response.json().resetToken);",
+                  "    console.log('resetToken saved');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OTP Verified",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP verified successfully\",\n  \"resetToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            {
+              "name": "400 Invalid or Expired OTP",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired OTP\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"{{resetToken}}\",\n  \"newPassword\": \"Admin@1234\",\n  \"confirmPassword\": \"Admin@1234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Resets the admin password using the short-lived `resetToken` from Verify OTP.\n\n**Required fields:** `resetToken`, `newPassword`, `confirmPassword`\n\nThe token's `purpose` claim must equal `'reset'`. Password is hashed by the pre-save hook."
+          },
+          "response": [
+            {
+              "name": "200 Password Reset",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password changed successfully\"\n}"
+            },
+            {
+              "name": "400 Passwords Mismatch",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Passwords do not match\"\n}"
+            },
+            {
+              "name": "400 Invalid Reset Token",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired reset token\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Change Password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Admin@1234\",\n  \"newPassword\": \"Admin@5678\",\n  \"confirmPassword\": \"Admin@5678\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Changes the currently authenticated admin's password. Returns fresh `accessToken` and `refreshToken` so the client stays logged in.\n\n**Required fields:** `currentPassword`, `newPassword`, `confirmPassword`\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Password Changed",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password changed successfully\",\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            {
+              "name": "401 Wrong Current Password",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Current password is incorrect\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Traveler Auth (Mobile)",
+      "item": [
+        {
+          "name": "Traveler Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"traveler@gmail.com\",\n  \"password\": \"Travel@1234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/traveler/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["traveler", "auth", "login"]
+            },
+            "description": "Authenticates a traveler (mobile app user). Response includes the traveler's `language` preference field used for app localization.\n\n**Required fields:** `email`, `password`"
+          },
+          "response": [
+            {
+              "name": "200 Traveler Login Successful",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"traveler\": {\n    \"_id\": \"664abc123def456789000099\",\n    \"name\": \"Bessie Cooper\",\n    \"email\": \"bessie.cooper@example.com\",\n    \"cpf\": \"405.555.000-0128\",\n    \"phone\": \"+01 0123456789\",\n    \"language\": \"pt-BR\",\n    \"totalTrips\": 3,\n    \"isActive\": true\n  },\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            {
+              "name": "401 Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid credentials\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Traveler Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"traveler@gmail.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/traveler/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["traveler", "auth", "forgot-password"]
+            },
+            "description": "Sends a 6-digit password reset OTP to the traveler's email. Always returns 200 regardless of email existence.\n\n**Required fields:** `email`"
+          },
+          "response": [
+            {
+              "name": "200 OTP Sent",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"If that email address is registered, an OTP has been sent.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Traveler Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"654321\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/traveler/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["traveler", "auth", "verify-otp"]
+            },
+            "description": "Verifies the OTP and returns a short-lived `resetToken` (15 min).\n\n**Required fields:** `otp`"
+          },
+          "response": [
+            {
+              "name": "200 OTP Verified",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP verified successfully\",\n  \"resetToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            {
+              "name": "400 Invalid OTP",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired OTP\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Traveler Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"{{resetToken}}\",\n  \"newPassword\": \"Travel@5678\",\n  \"confirmPassword\": \"Travel@5678\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/traveler/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["traveler", "auth", "reset-password"]
+            },
+            "description": "Resets traveler password using the `resetToken` from Verify OTP.\n\n**Required fields:** `resetToken`, `newPassword`, `confirmPassword`"
+          },
+          "response": [
+            {
+              "name": "200 Password Reset",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password changed successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "stats"]
+            },
+            "description": "Returns admin dashboard overview: total counts, trip status breakdown, recent trips (last 5), recent travelers (last 5), and active supplier count by category.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Dashboard Stats",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Dashboard stats fetched successfully\",\n  \"overview\": {\n    \"totalTrips\": 25,\n    \"totalTravelers\": 150,\n    \"totalSuppliers\": 12,\n    \"ongoingTrips\": 18,\n    \"endedTrips\": 7\n  },\n  \"recentTrips\": [\n    {\n      \"_id\": \"664abc123def456789000010\",\n      \"name\": \"Echo Valley Tours\",\n      \"startDate\": \"2026-05-12T00:00:00.000Z\",\n      \"endDate\": \"2026-05-15T00:00:00.000Z\",\n      \"status\": \"Ongoing\",\n      \"fromCountry\": \"Portugal\",\n      \"toCountry\": \"France\"\n    }\n  ],\n  \"recentTravelers\": [\n    {\n      \"_id\": \"664abc123def456789000099\",\n      \"name\": \"Bessie Cooper\",\n      \"email\": \"bessie.cooper@example.com\",\n      \"totalTrips\": 3\n    }\n  ],\n  \"suppliersByCategory\": [\n    { \"category\": \"Tour Operator\", \"count\": 4 },\n    { \"category\": \"Hotel\", \"count\": 3 }\n  ]\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"You are not logged in. Please log in to get access.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Monthly Chart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/chart?months=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "chart"],
+              "query": [
+                { "key": "months", "value": "12", "description": "Number of past months to include (default: 12)" }
+              ]
+            },
+            "description": "Returns month-by-month trip and traveler creation counts for charting. Empty months are zero-filled so the frontend always gets a complete series.\n\n**Auth:** Bearer `{{adminToken}}`\n**Query:** `months` — number of months to look back (default 12)"
+          },
+          "response": [
+            {
+              "name": "200 Monthly Chart",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Monthly chart data fetched successfully\",\n  \"months\": [\n    { \"label\": \"Jun 25\", \"year\": 2025, \"month\": 6, \"trips\": 2, \"travelers\": 8 },\n    { \"label\": \"Jul 25\", \"year\": 2025, \"month\": 7, \"trips\": 0, \"travelers\": 5 },\n    { \"label\": \"Aug 25\", \"year\": 2025, \"month\": 8, \"trips\": 4, \"travelers\": 14 },\n    { \"label\": \"May 26\", \"year\": 2026, \"month\": 5, \"trips\": 3, \"travelers\": 12 }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Get All Trips",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"],
+              "query": [
+                { "key": "page",  "value": "1",  "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "10", "description": "Items per page (default: 10)" }
+              ]
+            },
+            "description": "Returns a paginated list of all trips. Supports `search` (name/destination) and `status` (Ongoing/End/All) query params.\n\n**Auth:** Bearer `{{adminToken}}`\n**Query params:** `page`, `limit`, `search`, `status`"
+          },
+          "response": [
+            {
+              "name": "200 Trips List",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trips fetched successfully\",\n  \"items\": [\n    {\n      \"_id\": \"664abc123def456789000010\",\n      \"name\": \"Echo Valley Tours\",\n      \"fromCountry\": \"Portugal\",\n      \"toCountry\": \"France\",\n      \"startDate\": \"2026-05-12T00:00:00.000Z\",\n      \"endDate\": \"2026-05-15T00:00:00.000Z\",\n      \"status\": \"Ongoing\",\n      \"travelers\": [{ \"_id\": \"...\", \"name\": \"Bessie Cooper\", \"email\": \"bessie@...\" }]\n    }\n  ],\n  \"meta\": {\n    \"total\": 25,\n    \"page\": 1,\n    \"limit\": 10,\n    \"totalPages\": 3\n  }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Ongoing Trips",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips?status=Ongoing",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"],
+              "query": [
+                { "key": "status", "value": "Ongoing", "description": "Filter by trip status: Ongoing | End | All" }
+              ]
+            },
+            "description": "Returns only ongoing trips. Use `status=End` for completed trips or `status=All` (or omit) for all.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Ongoing Trips",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trips fetched successfully\",\n  \"items\": [],\n  \"meta\": { \"total\": 0, \"page\": 1, \"limit\": 10, \"totalPages\": 0 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Search Trips",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips?search=Paris",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"],
+              "query": [
+                { "key": "search", "value": "Paris", "description": "Case-insensitive regex search on trip name and toCountry" }
+              ]
+            },
+            "description": "Full-text search across trip `name` and `toCountry` fields using a case-insensitive regex.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Search Results",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trips fetched successfully\",\n  \"items\": [],\n  \"meta\": { \"total\": 0, \"page\": 1, \"limit\": 10, \"totalPages\": 0 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Create Trip",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name",          "value": "Echo Valley Tours",  "type": "text" },
+                { "key": "fromCountry",   "value": "Portugal",           "type": "text" },
+                { "key": "toCountry",     "value": "France",             "type": "text" },
+                { "key": "startDate",     "value": "2026-05-12",         "type": "text" },
+                { "key": "endDate",       "value": "2026-05-15",         "type": "text" },
+                { "key": "departureDate", "value": "2026-05-12",         "type": "text" },
+                { "key": "departureTime", "value": "10:30 AM",           "type": "text" },
+                { "key": "travelers",     "value": "[]",                 "type": "text", "description": "JSON array of traveler ObjectIds" },
+                { "key": "heroImage",     "type": "file", "src": "",     "description": "Optional hero image file (max 5MB, image/*)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"]
+            },
+            "description": "Creates a new trip. The itinerary is auto-generated (one day entry per calendar day from startDate to endDate). Nested objects like `destinationGuides` and `usefulApps` must be sent as JSON strings when using form-data.\n\n**Auth:** Bearer `{{adminToken}}`\n**Content-Type:** multipart/form-data\n**Required fields:** `name`, `fromCountry`, `toCountry`, `startDate`, `endDate`, `departureDate`, `departureTime`"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('tripId', json.trip._id);",
+                  "    console.log('tripId set:', json.trip._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Trip Created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trip created successfully\",\n  \"trip\": {\n    \"_id\": \"664abc123def456789000010\",\n    \"name\": \"Echo Valley Tours\",\n    \"fromCountry\": \"Portugal\",\n    \"toCountry\": \"France\",\n    \"startDate\": \"2026-05-12T00:00:00.000Z\",\n    \"endDate\": \"2026-05-15T00:00:00.000Z\",\n    \"departureDate\": \"2026-05-12T00:00:00.000Z\",\n    \"departureTime\": \"10:30 AM\",\n    \"status\": \"Ongoing\",\n    \"itinerary\": [\n      { \"dayNumber\": 1, \"date\": \"2026-05-12T00:00:00.000Z\", \"timeSlots\": [] },\n      { \"dayNumber\": 2, \"date\": \"2026-05-13T00:00:00.000Z\", \"timeSlots\": [] },\n      { \"dayNumber\": 3, \"date\": \"2026-05-14T00:00:00.000Z\", \"timeSlots\": [] },\n      { \"dayNumber\": 4, \"date\": \"2026-05-15T00:00:00.000Z\", \"timeSlots\": [] }\n    ],\n    \"heroImage\": { \"public_id\": \"\", \"url\": \"\" },\n    \"travelers\": [],\n    \"createdAt\": \"2026-05-01T10:00:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Missing Required Fields",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing required fields: name, fromCountry\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Trip by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "Fetches a single trip with full populated refs: travelers (name, email, phone, cpf, photo), suppliers on each time slot (name, category, country), and createdBy admin.\n\n**Auth:** Bearer `{{adminToken}}`\n**Param:** `tripId` — MongoDB ObjectId"
+          },
+          "response": [
+            {
+              "name": "200 Trip Found",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trip fetched successfully\",\n  \"trip\": { \"_id\": \"664abc123def456789000010\", \"name\": \"Echo Valley Tours\", \"...\" : \"...\" }\n}"
+            },
+            {
+              "name": "404 Trip Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Trip not found\"\n}"
+            },
+            {
+              "name": "400 Invalid ID",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid id: not a valid MongoDB ObjectId\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Trip",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name",      "value": "Echo Valley Tours Updated", "type": "text" },
+                { "key": "heroImage", "type": "file", "src": "", "description": "New hero image (replaces old — old is deleted from Cloudinary)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "Partially updates a trip. Only fields in the allowed list are applied: `name`, `fromCountry`, `toCountry`, `startDate`, `endDate`, `departureDate`, `departureTime`, `travelers`, `destinationGuides`, `usefulApps`. If a new `heroImage` file is uploaded, the old Cloudinary asset is deleted first. The `status` is auto-recalculated from `endDate` via the pre-save hook.\n\n**Auth:** Bearer `{{adminToken}}`\n**Content-Type:** multipart/form-data"
+          },
+          "response": [
+            {
+              "name": "200 Trip Updated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trip updated successfully\",\n  \"trip\": { \"_id\": \"664abc123def456789000010\", \"name\": \"Echo Valley Tours Updated\", \"...\" : \"...\" }\n}"
+            },
+            {
+              "name": "404 Trip Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Trip not found\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Trip",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "Permanently deletes a trip and all associated Cloudinary assets (heroImage + every time slot attachment).\n\n**Auth:** Bearer `{{adminToken}}`\n**Warning:** This action is irreversible."
+          },
+          "response": [
+            {
+              "name": "200 Trip Deleted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trip deleted successfully\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Add Time Slot to Day",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "activityTime",  "value": "10:30 AM",                         "type": "text" },
+                { "key": "activityTitle", "value": "Hotel Transfer",                    "type": "text" },
+                { "key": "supplier",      "value": "{{supplierId}}",                    "type": "text", "description": "Optional supplier ObjectId" },
+                { "key": "description",   "value": "<p>Transfer from airport to hotel</p>", "type": "text", "description": "Rich-text HTML string" },
+                { "key": "order",         "value": "0",                                "type": "text" },
+                { "key": "attachments",   "type": "file", "src": [],                   "description": "Up to 5 attachment files (image/pdf, max 5MB each)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/1/timeslots",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "1", "timeslots"]
+            },
+            "description": "Adds a time slot to a specific day in the itinerary. Attachment files are uploaded to Cloudinary `insighttravelbr/attachments` folder.\n\n**Auth:** Bearer `{{adminToken}}`\n**Path params:** `tripId`, `dayNumber` (integer matching the day's `dayNumber` field)\n**Required fields:** `activityTime`, `activityTitle`\n**Max attachments:** 5 files"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    var day = json.trip.itinerary.find(function(d) { return d.dayNumber === 1; });",
+                  "    if (day && day.timeSlots.length > 0) {",
+                  "        var slotId = day.timeSlots[day.timeSlots.length - 1]._id;",
+                  "        pm.collectionVariables.set('slotId', slotId);",
+                  "        console.log('slotId set:', slotId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Time Slot Added",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Time slot added successfully\",\n  \"trip\": {\n    \"_id\": \"664abc123def456789000010\",\n    \"itinerary\": [\n      {\n        \"dayNumber\": 1,\n        \"date\": \"2026-05-12T00:00:00.000Z\",\n        \"timeSlots\": [\n          {\n            \"_id\": \"664abc123def456789000020\",\n            \"activityTime\": \"10:30 AM\",\n            \"activityTitle\": \"Hotel Transfer\",\n            \"description\": \"<p>Transfer from airport to hotel</p>\",\n            \"attachments\": [],\n            \"order\": 0\n          }\n        ]\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Day Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Day 5 not found in itinerary\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Time Slot",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "activityTitle",     "value": "Updated Hotel Transfer",    "type": "text" },
+                { "key": "description",       "value": "<p>Updated description</p>","type": "text" },
+                { "key": "removeAttachments", "value": "[]", "type": "text", "description": "JSON array of Cloudinary public_ids to delete" },
+                { "key": "attachments",       "type": "file", "src": [],            "description": "New attachment files to append" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/1/timeslots/{{slotId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "1", "timeslots", "{{slotId}}"]
+            },
+            "description": "Updates a specific time slot. Can simultaneously add new attachments and remove existing ones by sending `removeAttachments` as a JSON-stringified array of Cloudinary `public_id` values.\n\n**Auth:** Bearer `{{adminToken}}`\n**Updatable fields:** `activityTime`, `activityTitle`, `supplier`, `description`, `order`\n**To remove attachments:** `removeAttachments: [\"insighttravelbr/attachments/abc123\"]`"
+          },
+          "response": [
+            {
+              "name": "200 Time Slot Updated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Time slot updated successfully\",\n  \"trip\": { \"_id\": \"664abc123def456789000010\", \"...\" : \"...\" }\n}"
+            },
+            {
+              "name": "404 Slot Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Time slot not found\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Time Slot",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/1/timeslots/{{slotId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "1", "timeslots", "{{slotId}}"]
+            },
+            "description": "Deletes a time slot and all its Cloudinary attachment assets.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Slot Deleted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Time slot deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Travelers",
+      "item": [
+        {
+          "name": "Get All Travelers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/travelers?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers"],
+              "query": [
+                { "key": "page",  "value": "1",  "description": "Page number" },
+                { "key": "limit", "value": "10", "description": "Items per page" }
+              ]
+            },
+            "description": "Returns a paginated list of travelers. Password is never included (select:false). Supports `search` on name and email.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Travelers List",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Travelers fetched successfully\",\n  \"items\": [\n    {\n      \"_id\": \"664abc123def456789000099\",\n      \"name\": \"Bessie Cooper\",\n      \"email\": \"bessie.cooper@example.com\",\n      \"cpf\": \"405.555.000-0128\",\n      \"phone\": \"+01 0123456789\",\n      \"totalTrips\": 3,\n      \"isActive\": true,\n      \"language\": \"pt-BR\"\n    }\n  ],\n  \"meta\": { \"total\": 150, \"page\": 1, \"limit\": 10, \"totalPages\": 15 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Search Travelers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/travelers?search=Bessie",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers"],
+              "query": [
+                { "key": "search", "value": "Bessie", "description": "Case-insensitive search on name and email" }
+              ]
+            },
+            "description": "Searches travelers by name or email using a case-insensitive regex.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Search Results",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Travelers fetched successfully\",\n  \"items\": [],\n  \"meta\": { \"total\": 0, \"page\": 1, \"limit\": 10, \"totalPages\": 0 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Create Traveler",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name",            "value": "Bessie Cooper",               "type": "text" },
+                { "key": "email",           "value": "bessie.cooper@example.com",   "type": "text" },
+                { "key": "cpf",             "value": "405.555.000-0128",             "type": "text", "description": "Brazilian tax ID — must be unique" },
+                { "key": "dateOfBirth",     "value": "2006-05-12",                  "type": "text" },
+                { "key": "phone",           "value": "+01 0123456789",              "type": "text" },
+                { "key": "passportNumber",  "value": "AB1234567",                   "type": "text" },
+                { "key": "password",        "value": "Travel@1234",                 "type": "text" },
+                { "key": "confirmPassword", "value": "Travel@1234",                 "type": "text" },
+                { "key": "language",        "value": "pt-BR",                       "type": "text", "description": "BCP 47 language tag for mobile localization" },
+                { "key": "photo",           "type": "file", "src": "",              "description": "Profile photo (max 5MB, image/*)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/travelers",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers"]
+            },
+            "description": "Creates a new traveler. Returns explicit 409 if email or CPF already exists. Password is hashed by the pre-save hook.\n\n**Auth:** Bearer `{{adminToken}}`\n**Required fields:** `name`, `email`, `cpf`, `dateOfBirth`, `password`, `confirmPassword`"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('travelerId', json.traveler._id);",
+                  "    console.log('travelerId set:', json.traveler._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Traveler Created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Traveler created successfully\",\n  \"traveler\": {\n    \"_id\": \"664abc123def456789000099\",\n    \"name\": \"Bessie Cooper\",\n    \"email\": \"bessie.cooper@example.com\",\n    \"cpf\": \"405.555.000-0128\",\n    \"dateOfBirth\": \"2006-05-12T00:00:00.000Z\",\n    \"phone\": \"+01 0123456789\",\n    \"passportNumber\": \"AB1234567\",\n    \"photo\": { \"public_id\": \"\", \"url\": \"\" },\n    \"totalTrips\": 0,\n    \"isActive\": true,\n    \"language\": \"pt-BR\"\n  }\n}"
+            },
+            {
+              "name": "409 Duplicate Email",
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"A traveler with this email already exists\"\n}"
+            },
+            {
+              "name": "409 Duplicate CPF",
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"A traveler with this CPF already exists\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Traveler by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/travelers/{{travelerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers", "{{travelerId}}"]
+            },
+            "description": "Fetches a single traveler by ID including all trips they are assigned to (queried from the Trip collection since the ref lives on the Trip side).\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Traveler Found",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Traveler fetched successfully\",\n  \"traveler\": { \"_id\": \"664abc123def456789000099\", \"name\": \"Bessie Cooper\", \"...\" : \"...\" },\n  \"trips\": [\n    {\n      \"_id\": \"664abc123def456789000010\",\n      \"name\": \"Echo Valley Tours\",\n      \"startDate\": \"2026-05-12T00:00:00.000Z\",\n      \"status\": \"Ongoing\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "404 Traveler Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Traveler not found\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Traveler",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name",    "value": "Bessie Cooper Updated",  "type": "text" },
+                { "key": "phone",   "value": "+01 9876543210",          "type": "text" },
+                { "key": "photo",   "type": "file", "src": "",          "description": "New profile photo (replaces old — old Cloudinary asset deleted)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/travelers/{{travelerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers", "{{travelerId}}"]
+            },
+            "description": "Partially updates a traveler. Allowed fields: `name`, `email`, `cpf`, `dateOfBirth`, `phone`, `passportNumber`, `language`. Returns sanitized traveler (no password/sensitive fields).\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Traveler Updated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Traveler updated successfully\",\n  \"traveler\": { \"_id\": \"664abc123def456789000099\", \"name\": \"Bessie Cooper Updated\", \"...\" : \"...\" }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Traveler",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/travelers/{{travelerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["travelers", "{{travelerId}}"]
+            },
+            "description": "Deletes a traveler and removes their profile photo from Cloudinary.\n\n**Auth:** Bearer `{{adminToken}}`\n**Warning:** Does not automatically remove the traveler from existing trips."
+          },
+          "response": [
+            {
+              "name": "200 Traveler Deleted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Traveler deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Suppliers",
+      "item": [
+        {
+          "name": "Get All Suppliers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers"],
+              "query": [
+                { "key": "page",  "value": "1",  "description": "Page number" },
+                { "key": "limit", "value": "10", "description": "Items per page" }
+              ]
+            },
+            "description": "Returns a paginated list of suppliers. Supports `search` (name/country) and `category` filter.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Suppliers List",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Suppliers fetched successfully\",\n  \"items\": [\n    {\n      \"_id\": \"664abc123def456789000050\",\n      \"name\": \"Iqbal Hasan Tours\",\n      \"email\": \"iqbal@tours.com\",\n      \"country\": \"Brasil\",\n      \"category\": \"Tour Operator\",\n      \"isActive\": true\n    }\n  ],\n  \"meta\": { \"total\": 12, \"page\": 1, \"limit\": 10, \"totalPages\": 2 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Filter Suppliers by Category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers?category=Tour Operator",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers"],
+              "query": [
+                { "key": "category", "value": "Tour Operator", "description": "One of: Tour Operator, Hotel, Restaurant, Transport, Guide, Other" }
+              ]
+            },
+            "description": "Filters suppliers by category. Valid values: `Tour Operator`, `Hotel`, `Restaurant`, `Transport`, `Guide`, `Other`.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Filtered Suppliers",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Suppliers fetched successfully\",\n  \"items\": [],\n  \"meta\": { \"total\": 0, \"page\": 1, \"limit\": 10, \"totalPages\": 0 }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Create Supplier",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name",     "value": "Iqbal Hasan Tours",  "type": "text" },
+                { "key": "email",    "value": "iqbal@tours.com",     "type": "text" },
+                { "key": "phone",    "value": "(405) 555-0128",      "type": "text" },
+                { "key": "country",  "value": "Brasil",              "type": "text" },
+                { "key": "category", "value": "Tour Operator",       "type": "text", "description": "Tour Operator | Hotel | Restaurant | Transport | Guide | Other" },
+                { "key": "logo",     "type": "file", "src": "",      "description": "Company logo (max 5MB, image/*)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers"]
+            },
+            "description": "Creates a new supplier. Returns 409 if email already exists.\n\n**Auth:** Bearer `{{adminToken}}`\n**Required fields:** `name`, `email`, `country`, `category`"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('supplierId', json.supplier._id);",
+                  "    console.log('supplierId set:', json.supplier._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Supplier Created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Supplier created successfully\",\n  \"supplier\": {\n    \"_id\": \"664abc123def456789000050\",\n    \"name\": \"Iqbal Hasan Tours\",\n    \"email\": \"iqbal@tours.com\",\n    \"phone\": \"(405) 555-0128\",\n    \"country\": \"Brasil\",\n    \"category\": \"Tour Operator\",\n    \"logo\": { \"public_id\": \"\", \"url\": \"\" },\n    \"isActive\": true\n  }\n}"
+            },
+            {
+              "name": "409 Duplicate Email",
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"A supplier with this email already exists\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Get Supplier by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers", "{{supplierId}}"]
+            },
+            "description": "Fetches full supplier details by ID.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Supplier Found",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Supplier fetched successfully\",\n  \"supplier\": { \"_id\": \"664abc123def456789000050\", \"name\": \"Iqbal Hasan Tours\", \"...\" : \"...\" }\n}"
+            },
+            {
+              "name": "404 Supplier Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Supplier not found\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Update Supplier",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Iqbal Hasan Premium Tours", "type": "text" },
+                { "key": "logo", "type": "file", "src": "", "description": "New logo (replaces old Cloudinary asset)" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers", "{{supplierId}}"]
+            },
+            "description": "Partially updates a supplier. Allowed fields: `name`, `email`, `phone`, `country`, `category`, `isActive`.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Supplier Updated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Supplier updated successfully\",\n  \"supplier\": { \"_id\": \"664abc123def456789000050\", \"name\": \"Iqbal Hasan Premium Tours\", \"...\" : \"...\" }\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Delete Supplier",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers", "{{supplierId}}"]
+            },
+            "description": "Deletes a supplier and removes their logo from Cloudinary.\n\n**Auth:** Bearer `{{adminToken}}`"
+          },
+          "response": [
+            {
+              "name": "200 Supplier Deleted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Supplier deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "AI Content",
+      "item": [
+        {
+          "name": "Generate Overview",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationName\": \"Brazil\",\n  \"contentType\": \"Overview\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai-content/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai-content", "generate"]
+            },
+            "description": "Generates a travel overview for the given destination using Google Gemini 1.5 Flash. Returns bullet-pointed text covering description, best time to visit, climate, local culture, and unique features.\n\n**Auth:** Bearer `{{adminToken}}`\n**Rate limit:** 30 requests/hour (AI tier)\n**Required fields:** `destinationName`, `contentType`\n**Valid contentType values:** `Overview`, `Highlights`, `Travel Tips`"
+          },
+          "response": [
+            {
+              "name": "200 Content Generated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Content generated successfully.\",\n  \"destinationName\": \"Brazil\",\n  \"contentType\": \"Overview\",\n  \"content\": \"• Brazil is the largest country in South America and the fifth largest in the world, covering approximately 8.5 million square kilometers.\\n• The country is renowned for its breathtaking Amazon Rainforest, which constitutes about 60% of the nation's territory.\\n• Best time to visit: April to June (dry season in most regions) — pleasant temperatures and fewer crowds.\\n• Climate varies widely: tropical in the north, semi-arid in the northeast, subtropical in the south.\\n• Brazil's vibrant culture is a blend of Indigenous, African, and Portuguese influences, visible in music (samba, bossa nova), art, and festivals.\\n• The country is famous for Carnival, one of the world's largest and most colorful celebrations, held annually before Lent.\\n• Brazil offers incredible biodiversity, beautiful beaches (Ipanema, Copacabana), and architectural wonders like the Christ the Redeemer statue.\"\n}"
+            },
+            {
+              "name": "400 Invalid contentType",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"contentType must be one of: Overview, Highlights, Travel Tips\"\n}"
+            },
+            {
+              "name": "429 Rate Limit Reached",
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"AI request limit reached. Try again in 1 hour.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Generate Highlights",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationName\": \"Paris\",\n  \"contentType\": \"Highlights\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai-content/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai-content", "generate"]
+            },
+            "description": "Generates a list of 7 top travel highlights and must-see attractions for the destination, including real place names.\n\n**Auth:** Bearer `{{adminToken}}`\n**contentType:** `Highlights`"
+          },
+          "response": [
+            {
+              "name": "200 Highlights Generated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Content generated successfully.\",\n  \"destinationName\": \"Paris\",\n  \"contentType\": \"Highlights\",\n  \"content\": \"• Eiffel Tower — the iconic iron lattice tower offers panoramic views from its three levels.\\n• Louvre Museum — home to the Mona Lisa and one of the world's largest art collections.\\n• Notre-Dame Cathedral — a Gothic masterpiece currently undergoing restoration.\\n• Musée d'Orsay — Impressionist masterpieces in a stunning converted railway station.\\n• Montmartre — the artistic hilltop neighborhood with the Sacré-Cœur Basilica and bohemian charm.\\n• Versailles Palace & Gardens — a short train ride for an unforgettable royal experience.\\n• Sainte-Chapelle — breathtaking Gothic chapel with stunning stained-glass windows.\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Generate Travel Tips",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationName\": \"Japan\",\n  \"contentType\": \"Travel Tips\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai-content/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai-content", "generate"]
+            },
+            "description": "Generates 7 practical travel tips with category labels (Currency:, Safety:, etc.).\n\n**Auth:** Bearer `{{adminToken}}`\n**contentType:** `Travel Tips`"
+          },
+          "response": [
+            {
+              "name": "200 Travel Tips Generated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Content generated successfully.\",\n  \"destinationName\": \"Japan\",\n  \"contentType\": \"Travel Tips\",\n  \"content\": \"• Best Time: Spring (March–May) for cherry blossoms or autumn (September–November) for foliage.\\n• Currency: Japanese Yen (JPY). Carry cash — many smaller establishments are cash-only.\\n• Transport: Purchase an IC card (Suica/Pasmo) for seamless train and bus travel nationwide.\\n• Language: English signage is common in tourist areas; learn basic Japanese phrases for rural areas.\\n• Safety: Japan is one of the safest countries for tourists. Emergency number is 110 (police) or 119 (fire/ambulance).\\n• Cultural Etiquette: Remove shoes when entering homes/temples. Avoid eating while walking. Bow as a greeting.\\n• Food: Try local izakayas for authentic dining. Inform restaurant staff of dietary restrictions in advance.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Fact Check",
+      "item": [
+        {
+          "name": "Verify Fact",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Spring and fall offer pleasant weather and fewer crowds. Summer brings heat and vibrant events. Winter showcases beautiful snow-covered landscapes.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/fact-check/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["fact-check", "verify"]
+            },
+            "description": "Splits the provided text into individual factual claims and verifies each using Gemini 1.5 Flash in native JSON mode (no markdown fencing issues). Each claim is labeled `Verified`, `Not Found`, or `Pending`.\n\n**Auth:** Bearer `{{adminToken}}`\n**Rate limit:** 30 requests/hour (AI tier)\n**Required fields:** `text` (minimum 10 characters)\n\n**Status definitions:**\n- `Verified` — factually accurate and well-established\n- `Not Found` — inaccurate, misleading, or contradicts known facts\n- `Pending` — subjective, ambiguous, or cannot be confirmed"
+          },
+          "response": [
+            {
+              "name": "200 Fact Check Complete",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Fact check completed.\",\n  \"totalClaims\": 3,\n  \"results\": [\n    {\n      \"claim\": \"Spring and fall offer pleasant weather and fewer crowds.\",\n      \"status\": \"Verified\",\n      \"reason\": \"Spring and autumn are widely regarded as the best travel seasons in many destinations due to mild temperatures and lower tourist numbers.\"\n    },\n    {\n      \"claim\": \"Summer brings heat and vibrant events.\",\n      \"status\": \"Verified\",\n      \"reason\": \"Summer is typically the hottest season and hosts the most festivals, outdoor concerts, and sporting events globally.\"\n    },\n    {\n      \"claim\": \"Winter showcases beautiful snow-covered landscapes.\",\n      \"status\": \"Pending\",\n      \"reason\": \"This is only accurate for destinations at higher latitudes or elevations; many winter destinations do not experience snow.\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "400 Text Too Short",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Text is too short to fact-check.\"\n}"
+            },
+            {
+              "name": "500 Parse Failure",
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Failed to parse fact-check results. Please try again.\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+
+  ]
+}

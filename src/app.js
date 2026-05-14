@@ -2,10 +2,10 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 import router from './mainRoute/index.js';
 import globalErrorHandler from './errors/globalErrorHandler.js';
-import notFound from './middleware/notFound.js';
+import AppError from './utils/AppError.js';
+import { apiLimiter } from './middleware/rateLimiter.middleware.js';
 
 const app = express();
 
@@ -21,25 +21,35 @@ app.use(
   })
 );
 
-app.use(morgan('dev'));
+app.use(morgan(':method :url :status :response-time ms'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again after 15 minutes' },
-});
-app.use(limiter);
+// Global rate limit — tighter per-resource limits are applied in individual routers
+app.use(apiLimiter);
 
-app.get('/', (req, res) => res.send('Server is running...!!'));
+// Root health check
+app.get('/', (req, res) =>
+  res.status(200).json({ status: 'ok', message: 'Insight Travel API is running' })
+);
+
+// Versioned health check (full metadata)
+app.get('/api/v1/health', (req, res) =>
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date(),
+  })
+);
 
 app.use('/api/v1', router);
 
-app.use(notFound);
+// 404 — must come after all routes (app.use catches every method in Express 5)
+app.use((req, res, next) =>
+  next(new AppError(404, `Route ${req.originalUrl} not found`))
+);
+
 app.use(globalErrorHandler);
 
 export default app;
