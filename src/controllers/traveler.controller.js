@@ -145,7 +145,7 @@ export const getTravelerTrips = catchAsync(async (req, res, next) => {
   if (!traveler) return next(new AppError(404, 'Traveler not found'));
 
   const trips = await Trip.find({ travelers: traveler._id , status: 'Ongoing' })
-    .select('name startDate endDate status fromCountry toCountry heroImage')
+    // .select('name startDate endDate status fromCountry toCountry heroImage')
     .sort({ startDate: -1 });
 
   sendResponse(res, {
