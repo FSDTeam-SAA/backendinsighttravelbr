@@ -88,14 +88,12 @@ travelerSchema.pre('save', function (next) {
   }
   // Ensure confirmPassword is never persisted
   this._confirmPassword = undefined;
-  next();
 });
 
 // Hash password if modified
 travelerSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 travelerSchema.methods.correctPassword = async function (candidatePassword, hashedPassword) {

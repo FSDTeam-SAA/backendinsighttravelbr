@@ -137,3 +137,21 @@ export const deleteTraveler = catchAsync(async (req, res, next) => {
     message: 'Traveler deleted successfully',
   });
 });
+
+
+
+export const getTravelerTrips = catchAsync(async (req, res, next) => {
+  const traveler = await Traveler.findById({_id: req.user._id});
+  if (!traveler) return next(new AppError(404, 'Traveler not found'));
+
+  const trips = await Trip.find({ travelers: traveler._id , status: 'Ongoing' })
+    .select('name startDate endDate status fromCountry toCountry heroImage')
+    .sort({ startDate: -1 });
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Traveler trips fetched successfully',
+    data: { trips },
+  });
+});

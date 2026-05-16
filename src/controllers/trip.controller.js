@@ -110,7 +110,8 @@ export const createTrip = catchAsync(async (req, res, next) => {
     departureDate: body.departureDate,
     departureTime: body.departureTime,
     travelers: safeParseJSON(body.travelers) || [],
-    itinerary: buildItinerary(body.startDate, body.endDate),
+    // itinerary: buildItinerary(body.startDate, body.endDate),
+    itinerary: safeParseJSON(body.itinerary) || buildItinerary(body.startDate, body.endDate), // allow custom itinerary via JSON, fallback to auto-build
     destinationGuides: safeParseJSON(body.destinationGuides),
     usefulApps: safeParseJSON(body.usefulApps) || [],
     createdBy: req.user._id,

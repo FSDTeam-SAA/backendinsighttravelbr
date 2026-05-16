@@ -27,7 +27,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Global rate limit — tighter per-resource limits are applied in individual routers
-app.use(apiLimiter);
+// app.use(apiLimiter);
 
 // Root health check
 app.get('/', (req, res) =>
