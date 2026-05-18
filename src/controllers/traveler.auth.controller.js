@@ -61,7 +61,7 @@ export const travelerForgotPassword = catchAsync(async (req, res, next) => {
     return next(new AppError(400, 'Please provide your email address'));
   }
 
-  const traveler = await Traveler.findOne({ email: email.toLowerCase().trim() });
+  const traveler = await Traveler.findOne({ email: email });
 
   // Always return 200 — prevents user enumeration
   if (traveler) {
@@ -87,7 +87,7 @@ export const travelerForgotPassword = catchAsync(async (req, res, next) => {
 
 // POST /traveler/auth/verify-otp
 export const travelerVerifyOTP = catchAsync(async (req, res, next) => {
-  const { otp } = req.body;
+  const { otp, email } = req.body;
 
   if (!otp) {
     return next(new AppError(400, 'OTP is required'));
@@ -96,6 +96,7 @@ export const travelerVerifyOTP = catchAsync(async (req, res, next) => {
   const hashedOTP = crypto.createHash('sha256').update(String(otp)).digest('hex');
 
   const traveler = await Traveler.findOne({
+    email: email,
     passwordResetOTP: hashedOTP,
     passwordResetOTPExpiry: { $gt: Date.now() },
   }).select('+passwordResetOTP +passwordResetOTPExpiry');

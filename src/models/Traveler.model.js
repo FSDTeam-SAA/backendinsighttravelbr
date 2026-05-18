@@ -92,7 +92,7 @@ travelerSchema.pre('save', function (next) {
 
 // Hash password if modified
 travelerSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) return 
   this.password = await bcrypt.hash(this.password, 12);
 });
 
@@ -102,6 +102,7 @@ travelerSchema.methods.correctPassword = async function (candidatePassword, hash
 
 travelerSchema.methods.createPasswordResetOTP = function () {
   const otp = String(Math.floor(100000 + Math.random() * 900000));
+  console.log(`Generated OTP for ${this.email}: ${otp}`); // Log OTP for testing purposes
   this.passwordResetOTP = crypto.createHash('sha256').update(otp).digest('hex');
   this.passwordResetOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
   return otp;
