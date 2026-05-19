@@ -40,6 +40,10 @@ const travelerSchema = new mongoose.Schema(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
+    plainPassword: {
+      type: String,
+      default: '',
+    },
     photo: {
       public_id: { type: String, default: '' },
       url: { type: String, default: '' },
@@ -79,21 +83,21 @@ travelerSchema
     this._confirmPassword = value;
   });
 
-// Validate confirmPassword matches password before saving
-travelerSchema.pre('save', function (next) {
+// Validate, save plain password, then hash
+travelerSchema.pre('save', async function () {
+  // Validate confirmPassword
   if ((this.isNew || this.isModified('password')) && this._confirmPassword !== undefined) {
     if (this.password !== this._confirmPassword) {
-      return next(new Error('Passwords do not match'));
+      throw new Error('Passwords do not match');
     }
   }
-  // Ensure confirmPassword is never persisted
   this._confirmPassword = undefined;
-});
 
-// Hash password if modified
-travelerSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return 
-  this.password = await bcrypt.hash(this.password, 12);
+  // Save plain text then hash
+  if (this.isModified('password')) {
+    this.plainPassword = this.password;
+    this.password = await bcrypt.hash(this.password, 12);
+  }
 });
 
 travelerSchema.methods.correctPassword = async function (candidatePassword, hashedPassword) {
