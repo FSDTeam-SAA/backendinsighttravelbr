@@ -36,46 +36,32 @@ const usefulAppCategorySchema = new Schema(
 );
 
 // ── DestinationGuidesSchema ────────────────────────────────────────────────
+const cityCuriositySchema = new Schema(
+  {
+    cityName: { type: String },
+    description: { type: String },
+  },
+  { _id: false }
+);
+
+const countryGuideSchema = new Schema(
+  {
+    quickFacts: {
+      currency: { type: String },
+      language: { type: String },
+      religion: { type: String },
+      government: { type: String },
+    },
+    historyAndCulture: { type: String },
+    cityCuriosities: [cityCuriositySchema],
+  },
+  { _id: false }
+);
+
 const destinationGuidesSchema = new Schema(
   {
-    fromCountry: {
-      fromCountry: { type: String},
-
-      quickFacts: {
-        currency: { type: String },
-        language: { type: String },
-        religion: { type: String },
-        government: { type: String },
-      },
-      historyAndCulture: { type: String },
-      cityCuriosities: [
-        {
-          cityName: { type: String },
-          description: { type: String },
-          _id: false,
-        },
-      ],
-    },
-    toCountry: {
-      toCountry: { type: String },
-
-      quickFacts: {
-        currency: { type: String },
-        language: { type: String },
-        religion: { type: String },
-        government: { type: String },
-      },
-      historyAndCulture: { type: String },
-      cityCuriosities: [
-        {
-          cityName: { type: String },
-          description: { type: String },
-          _id: false,
-        },
-      ],
-    }
-
-
+    fromCountry: countryGuideSchema,
+    toCountry: countryGuideSchema,
   },
   { _id: false }
 );
@@ -194,6 +180,7 @@ tripSchema.pre('save', function (next) {
   if (this.endDate) {
     this.status = this.endDate < new Date() ? 'End' : 'Ongoing';
   }
+  next();
 });
 
 // Pre-find: ensure status is always current when querying
@@ -202,6 +189,7 @@ tripSchema.pre(/^find/, function (next) {
   const now = new Date();
   // If the query doesn't already filter by status, add a post-query status correction
   this._autoStatusUpdate = now;
+  next();
 });
 
 tripSchema.post(/^find/, function (docs) {
