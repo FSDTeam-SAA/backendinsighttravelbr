@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
+const getTripStatus = (endDate, now = new Date()) => {
+  if (!endDate) return 'Ongoing';
+  return endDate < now ? 'End' : 'Ongoing';
+};
+
 const appSchema = new Schema(
   {
     appName: { type: String, required: [true, 'App name is required'] },
@@ -171,34 +176,28 @@ const tripSchema = new Schema(
 
 // Virtual: always returns real-time computed status based on endDate
 tripSchema.virtual('currentStatus').get(function () {
-  if (!this.endDate) return 'Ongoing';
-  return this.endDate < new Date() ? 'End' : 'Ongoing';
+  return getTripStatus(this.endDate);
 });
 
 // Pre-save: sync persisted status field with endDate so DB queries stay accurate
-tripSchema.pre('save', function (next) {
-  if (this.endDate) {
-    this.status = this.endDate < new Date() ? 'End' : 'Ongoing';
-  }
-  next();
+tripSchema.pre('save', function () {
+  this.status = getTripStatus(this.endDate);
 });
 
 // Pre-find: ensure status is always current when querying
 // Keeps persisted status accurate for range/filter queries without extra round-trips
-tripSchema.pre(/^find/, function (next) {
-  const now = new Date();
-  // If the query doesn't already filter by status, add a post-query status correction
-  this._autoStatusUpdate = now;
-  next();
+tripSchema.pre(/^find/, function () {
+  // Capture one timestamp for the whole query so all returned docs use the same cutoff.
+  this._autoStatusUpdate = new Date();
 });
 
 tripSchema.post(/^find/, function (docs) {
   if (!docs) return;
-  const now = this._autoStatusUpdate;
+  const now = this._autoStatusUpdate ?? new Date();
   const list = Array.isArray(docs) ? docs : [docs];
   list.forEach((doc) => {
-    if (doc && doc.endDate) {
-      doc.status = doc.endDate < now ? 'End' : 'Ongoing';
+    if (doc) {
+      doc.status = getTripStatus(doc.endDate, now);
     }
   });
 });
