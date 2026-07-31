@@ -7,9 +7,18 @@ import { initTripStatusJob } from './src/jobs/tripStatus.job.js';
 
 const PORT = process.env.PORT || 5000;
 
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err.message);
-  process.exit(1);
+// process.on('uncaughtException', (err) => {
+//   console.error('Uncaught Exception:', err.message);
+//   process.exit(1);
+// });
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection full error:");
+  console.error(reason);
+
+  server.close(() => {
+    process.exit(1);
+  });
 });
 
 const httpServer = createServer(app);
